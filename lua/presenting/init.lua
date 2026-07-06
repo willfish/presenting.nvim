@@ -73,10 +73,6 @@ Presenting.config = {
   syntax_highlighting = {
     enabled = false,
     parser = nil,
-    language_aliases = {
-      rb = "ruby",
-      sh = "bash",
-    },
   },
 }
 --minidoc_afterlines_end
@@ -387,16 +383,15 @@ H.set_slide_content = function(state, slide)
   state.slide = slide
   vim.api.nvim_buf_set_lines(state.slide_buf, 0, -1, false, slide_lines)
   vim.api.nvim_buf_set_option(state.slide_buf, "modifiable", orig_modifiable)
-  H.start_syntax_highlighting(state, slide_lines)
+  H.start_syntax_highlighting(state)
 
   local footer_text = "presenting.nvim | " .. state.slide .. "/" .. state.n_slides
   vim.api.nvim_buf_set_lines(state.footer_buf, 0, -1, false, { footer_text })
 end
 
 ---@param state table
----@param slide_lines table
 ---@private
-H.start_syntax_highlighting = function(state, slide_lines)
+H.start_syntax_highlighting = function(state)
   local syntax_highlighting = Presenting.config.syntax_highlighting
   if syntax_highlighting == nil or not syntax_highlighting.enabled then return end
 
@@ -405,69 +400,7 @@ H.start_syntax_highlighting = function(state, slide_lines)
 
   pcall(require, "nvim-treesitter.query_predicates")
   pcall(vim.treesitter.start, state.slide_buf, parser)
-  H.start_fenced_code_syntax(
-    state.slide_buf,
-    slide_lines,
-    syntax_highlighting.language_aliases or {}
-  )
 end
-
----@param buf integer
----@param lines table
----@param aliases table
----@private
-H.start_fenced_code_syntax = function(buf, lines, aliases)
-  if Presenting._state.filetype ~= "markdown" then return end
-
-  vim.api.nvim_buf_call(buf, function()
-    vim.cmd("syntax enable")
-
-    for _, lang in ipairs(H.fenced_code_languages(lines, aliases)) do
-      local group_lang = H.syntax_group_language(lang)
-      local region_group = "Presenting" .. group_lang .. "Code"
-      local cluster_group = "@Presenting" .. group_lang
-      local escaped_lang = vim.fn.escape(lang, [[\/]])
-
-      vim.cmd("silent! syntax include " .. cluster_group .. " syntax/" .. lang .. ".vim")
-      vim.cmd(
-        "silent! syntax region "
-          .. region_group
-          .. " start='^```"
-          .. escaped_lang
-          .. "\\(\\s.*\\)\\?$' end='^```$' contains="
-          .. cluster_group
-          .. " keepend"
-      )
-    end
-  end)
-end
-
----@param lines table
----@param aliases table
----@return table
----@private
-H.fenced_code_languages = function(lines, aliases)
-  local seen = {}
-  local languages = {}
-
-  for _, line in ipairs(lines) do
-    local lang = line:match("^```%s*([%w_+.#-]+)")
-    lang = lang and lang:lower()
-    lang = aliases[lang] or lang
-
-    if lang and lang ~= "text" and lang ~= "plain" and not seen[lang] then
-      seen[lang] = true
-      table.insert(languages, lang)
-    end
-  end
-
-  return languages
-end
-
----@param lang string
----@return string
----@private
-H.syntax_group_language = function(lang) return (lang:gsub("^%l", string.upper):gsub("[^%w]", "")) end
 
 ---@param buf integer
 ---@param mappings table

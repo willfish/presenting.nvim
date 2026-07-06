@@ -44,37 +44,4 @@ T["syntax_highlighting"]["starts treesitter for slide buffer when enabled"] = fu
   MiniTest.expect.equality(child.lua_get("_G.treesitter_start_calls[1].parser"), "markdown")
 end
 
-T["syntax_highlighting"]["applies syntax highlighting inside ruby fenced blocks"] = function()
-  child.lua([[
-    package.loaded["presenting"] = nil
-
-    vim.api.nvim_buf_set_lines(0, 0, -1, false, {
-      "# Slide",
-      "",
-      "```ruby",
-      "plugin :oplog, primary_key: :measure_sid",
-      "```",
-    })
-    vim.bo.filetype = "markdown"
-
-    require("presenting").setup({
-      syntax_highlighting = {
-        enabled = true,
-        parser = "markdown",
-      },
-    })
-
-    vim.cmd("Presenting")
-    vim.cmd("redraw")
-
-    local slide_buf = require("presenting")._state.slide_buf
-    local syntax = vim.inspect_pos(slide_buf, 3, 0).syntax
-    _G.has_ruby_syntax = vim.iter(syntax):any(function(item)
-      return item.hl_group == "PresentingRubyCode"
-    end)
-  ]])
-
-  MiniTest.expect.equality(child.lua_get("_G.has_ruby_syntax"), true)
-end
-
 return T
