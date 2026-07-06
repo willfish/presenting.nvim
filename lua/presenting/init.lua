@@ -70,6 +70,10 @@ Presenting.config = {
   -- A function that configures the slide buffer.
   -- If you want custom settings write your own function that accepts a buffer id as argument.
   configure_slide_buffer = function(buf) H.configure_slide_buffer(buf) end,
+  syntax_highlighting = {
+    enabled = false,
+    parser = nil,
+  },
 }
 --minidoc_afterlines_end
 
@@ -384,9 +388,22 @@ H.set_slide_content = function(state, slide)
     vim.split(state.slides[state.slide], "\n")
   )
   vim.api.nvim_buf_set_option(state.slide_buf, "modifiable", orig_modifiable)
+  H.start_syntax_highlighting(state)
 
   local footer_text = "presenting.nvim | " .. state.slide .. "/" .. state.n_slides
   vim.api.nvim_buf_set_lines(state.footer_buf, 0, -1, false, { footer_text })
+end
+
+---@param state table
+---@private
+H.start_syntax_highlighting = function(state)
+  local syntax_highlighting = Presenting.config.syntax_highlighting
+  if syntax_highlighting == nil or not syntax_highlighting.enabled then return end
+
+  local parser = syntax_highlighting.parser or state.filetype
+  if parser == nil or parser == "" then return end
+
+  vim.treesitter.start(state.slide_buf, parser)
 end
 
 ---@param buf integer
